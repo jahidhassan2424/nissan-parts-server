@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 
 // Middle Wire
@@ -16,7 +16,30 @@ async function run() {
     try {
         await client.connect();
         console.log("DB Connected");
-        const toolsCollection = client.db("nissan").collection("productsBackup");
+        const toolsCollectionBackup = client.db("nissan").collection("productsBackup");
+        const toolsCollection = client.db("nissan").collection("products");
+        const singleCategoryToolsCollection = client.db("nissan").collection("singleCategory");
+        //Reset Products data
+        app.get('/productsReset', async (req, res) => {
+            const getFromBackup = await toolsCollectionBackup.find().toArray();
+            const copyInToolsCollection = await toolsCollection.insertMany(getFromBackup);
+            res.send(copyInToolsCollection);
+        })
+
+        // get all products
+        app.get('/products', async (req, res) => {
+            const result = await toolsCollection.find().toArray();
+            res.send(result)
+        })
+
+        //get single product by ID
+
+        app.get('/product/:id', async (req, res) => {
+            const id = req?.params.id;
+            const result = await toolsCollection.findOne({ _id: ObjectId(id) })
+            res.send(result)
+        })
+
     }
     finally {
 
