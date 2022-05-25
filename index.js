@@ -3,19 +3,18 @@ const cors = require('cors');
 const app = express();
 const nodemailer = require('nodemailer');
 require('dotenv').config()
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const query = require('express/lib/middleware/query');
 const stripe = require('stripe')(process.env.STRIPE_PK_KEY);
-
 const port = process.env.PORT || 5000;
-
-
 // Middle Wire
 app.use(cors());
 app.use(express.json())
-
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.h2ts2.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+
 async function run() {
     try {
         await client.connect();
@@ -24,59 +23,102 @@ async function run() {
         const toolsCollection = client.db("nissan").collection("products");
         const singleCategoryToolsCollection = client.db("nissan").collection("singleCategory");
         const ordersCollection = client.db("nissan").collection("orders");
+        const usersCollection = client.db("nissan").collection("users");
+        // create json token function
+        const generateAccessToken = (userData) => {
+            console.log(userData);
+
+            return jwt.sign(userData, process.env.JWT_SECRET_KEY, { expiresIn: '1y' });
+        }
+
+        //JWT Verify
+        function verifyJWT(req, res, next) {
+            authHeader = req.headers.authorization;
+            if (!authHeader) {
+                return res.status(401).send({ message: 'UnAuthorized Access' });
+            }
+            else {
+                const token = authHeader.split(' ')[1];
+                jwt.verify(token, process.env.JWT_SECRET_KEY, function (err, decoded) {
+                    // err
+                    if (err) {
+                        return res.status(403).send({ message: 'Forbidden' })
+                    }
+                    req.decoded = decoded;
+                });
+                next();
+            }
+        }
         //Reset Products data
         app.get('/productsReset', async (req, res) => {
             const getFromBackup = await toolsCollectionBackup.find().toArray();
             const copyInToolsCollection = await toolsCollection.insertMany(getFromBackup);
             res.send(copyInToolsCollection);
         });
-
         // get all products
         app.get('/products', async (req, res) => {
             const result = await toolsCollection.find().toArray();
-            res.send(result)
+            res.send(result);
         });
-
         //get single product by ID
-        app.get('/product/:id', async (req, res) => {
+        app.get('/product/:id', verifyJWT, async (req, res) => {
             const id = req?.params.id;
             const result = await toolsCollection.findOne({ _id: ObjectId(id) })
             res.send(result)
         });
-
         // get user based orders 
-        app.get('/myOrders', async (req, res) => {
+        app.get('/myOrders', verifyJWT, async (req, res) => {
             const email = req?.query.email;
             const result = await ordersCollection.find({ email: email }).toArray();
             res.send(result)
         });
-
         //Get single order by ID
-        app.get('/singleOrder/:id', async (req, res) => {
-            const id = req?.params;
+        app.get('/singleOrder/:id', verifyJWT, async (req, res) => {
+            const id = req?.params.id;
+            console.log(id);
             const query = { _id: ObjectId(id) };
             const result = await ordersCollection.findOne(query);
             res.send(result)
-        })
+        });
 
+        //Get all users
+        app.get('/users', verifyJWT, async (req, res) => {
+            const result = await usersCollection.find().toArray();
+            res.send(result)
+        });
+
+        //Get single users
+        app.get('/users/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const result = await usersCollection.findOne({ email: email });
+            res.send(result);
+        });
+
+        //Verify admin
+        app.get('/admin/:email', async (req, res) => {
+            const email = req?.params.email;
+            const user = await usersCollection.findOne({ email: email });
+            const isAdmin = user.role === 'admin';
+            res.send(isAdmin)
+        });
+
+        // =======================================================================//
         // post requests starts here 
-        app.post('/orders', async (req, res) => {
+        // =======================================================================//
+        app.post('/orders', verifyJWT, async (req, res) => {
             const info = req?.body;
             console.log(info);
             const result = await ordersCollection.insertOne(info);
             res.send(result)
         });
-
         //Send Email
-        app.post('/email', async (req, res) => {
+        app.post('/email', verifyJWT, async (req, res) => {
             const body = req.body;
             console.log(body);
-
             const toEmail = body.toEmail;
             const subject = body.subject;
             const text = body.text;
             console.log(body);
-
             const transporter = nodemailer.createTransport({
                 service: "hotmail",
                 auth: {
@@ -93,17 +135,13 @@ async function run() {
             transporter.sendMail(options, function (err, info) {
                 if (err) {
                     console.log(err);
-
                 }
                 console.log("Success Information", info);
-
             })
             res.send({ status: true })
         });
-
-
         //Stripe Payments
-        app.post('/create-payment-intent', async (req, res) => {
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
             const price = req?.body.amount;
             const amount = price * 100;
             const paymentIntent = await stripe.paymentIntents.create({
@@ -113,50 +151,120 @@ async function run() {
             });
             res.send({ clientSecret: paymentIntent.client_secret })
         });
-
+        //====================================================================//
         //Put Method Starts here
-        app.put('/peymentStatus/:id', async (req, res) => {
+        //====================================================================//
+        //Make  User
+        app.put('/users/:email', async (req, res) => {
+            const email = req?.params.email;
+            const name = req?.body.name;
+            console.log(name);
+
+            const userForToken = req?.body;
+            console.log(userForToken);
+
+            const filter = { email: email }
+            const options = { upsert: true }
+            const updateDoc = {
+                $set: { email, displayName: name }
+            }
+            const result = await usersCollection.updateOne(filter, updateDoc, options);
+            const accessToken = generateAccessToken(userForToken);
+            res.send({ accessToken, result });
+        });
+
+        //Make Admin
+        app.put('/makeAdmin/:email', verifyJWT, async (req, res) => {
+            const email = req?.params.email;
+            const query = { email: email };
+            const options = { upsert: true }
+            const updateDoc = {
+                $set: { role: 'admin' }
+            }
+            const result = await usersCollection.updateOne(query, updateDoc, options);
+            res.send(result)
+        });
+
+        //Remove Admin
+        app.put('/removeAdmin/:email', verifyJWT, async (req, res) => {
+            const email = req?.params.email;
+            const query = { email: email };
+            const options = { upsert: true }
+            const updateDoc = {
+                $set: { role: '' }
+            }
+            const result = await usersCollection.updateOne(query, updateDoc, options);
+            res.send(result)
+        });
+
+        //Insert edited profile data
+        app.put('/updateUser/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const data = req?.body.data;
+            const filter = { email: email };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: {
+                    displayName: data.displayName,
+                    address: data.address,
+                    phone: data.phone,
+                    institute: data.institute,
+                    linkedIn: data.linkedIn,
+                    facebook: data.facebook,
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updateDoc, options);
+            res.send(result);
+        });
+
+
+
+        //Payment Status Update
+        app.put('/peymentStatus/:id', verifyJWT, async (req, res) => {
             const id = req?.params.id;
+            const transactionId = req?.body.transactionIdDB;
+            console.log(transactionId);
             const query = { _id: ObjectId(id) }
             const options = { upsert: true };
             const updateDoc = {
                 $set: {
-                    'isPaid': true
+                    'isPaid': true,
+                    transactionID: transactionId
                 }
             }
             const result = await ordersCollection.updateOne(query, updateDoc, options);
             res.send(result)
-        })
-
-
-
+        });
+        //=============================================================================//
         //Delete method Starts Here
-        // app.delete('/orders', async (req, res) => {
-        //     const query = {}
-        //     const result = await ordersCollection.deleteMany(query);
-        //     res.send(result)
-        // })
-
-
-
-
-
+        //=============================================================================//
+        //delete all orders
+        app.delete('/orders', async (req, res) => {
+            const query = {}
+            const result = await ordersCollection.deleteMany(query);
+            res.send(result)
+        });
+        //Delete all users
+        app.delete('/users', async (req, res) => {
+            const query = {}
+            const result = await usersCollection.deleteMany(query);
+            res.send(result)
+        });
+        // Delete Single Order by ID
+        app.delete('/order/:id', verifyJWT, async (req, res) => {
+            const id = req?.params.id
+            const query = { _id: ObjectId(id) }
+            const result = await usersCollection.deleteOne(query);
+            res.send(result);
+        });
     }
     finally {
-
     }
 }
 run().catch(console.dir);
-
-
 app.get('/', async (req, res) => {
     res.send("Working")
 })
-
 app.listen(port, () => {
     console.log('Listening to port', port,);
-
 })
-
-
-
