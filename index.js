@@ -95,13 +95,13 @@ async function run() {
             res.send(result)
         });
         // get user based orders 
-        app.get('/myOrders', async (req, res) => {
+        app.get('/myOrders', verifyJWT, async (req, res) => {
             const email = req?.query.email;
             const result = await ordersCollection.find({ email: email }).toArray();
             res.send(result)
         });
         //Get single order by ID
-        app.get('/singleOrder/:id', verifyJWT, async (req, res) => {
+        app.get('/singleOrder/:id', async (req, res) => {
             const id = req?.params.id;
             console.log(id);
             const query = { _id: ObjectId(id) };
@@ -110,20 +110,20 @@ async function run() {
         });
 
         //Get all users
-        app.get('/users', async (req, res) => {
+        app.get('/users', verifyJWT, async (req, res) => {
             const result = await usersCollection.find().toArray();
             res.send(result)
         });
 
         //Get single users
-        app.get('/users/:email', async (req, res) => {
+        app.get('/users/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
             const result = await usersCollection.findOne({ email: email });
             res.send(result);
         });
 
         //Verify admin
-        app.get('/admin/:email', async (req, res) => {
+        app.get('/admin/:email', verifyJWT, async (req, res) => {
             const email = req?.params.email;
             const user = await usersCollection.findOne({ email: email });
             const isAdmin = user.role === 'admin';
@@ -176,7 +176,7 @@ async function run() {
             res.send({ status: true })
         });
         //Stripe Payments
-        app.post('/create-payment-intent', async (req, res) => {
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
             const price = req?.body.amount;
             const amount = price * 100;
             const paymentIntent = await stripe.paymentIntents.create({
@@ -228,7 +228,7 @@ async function run() {
         });
 
         //Make Admin
-        app.put('/makeAdmin/:email', async (req, res) => {
+        app.put('/makeAdmin/:email', verifyJWT, async (req, res) => {
             const email = req?.params.email;
             const query = { email: email };
             const options = { upsert: true }
@@ -240,7 +240,7 @@ async function run() {
         });
 
         //Remove Admin
-        app.put('/removeAdmin/:email', async (req, res) => {
+        app.put('/removeAdmin/:email', verifyJWT, async (req, res) => {
             const email = req?.params.email;
             const query = { email: email };
             const options = { upsert: true }
@@ -252,7 +252,7 @@ async function run() {
         });
 
         //Insert edited profile data
-        app.put('/updateUser/:email', async (req, res) => {
+        app.put('/updateUser/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
             const data = req?.body.data;
             const filter = { email: email };
@@ -274,7 +274,7 @@ async function run() {
 
 
         //Payment Status Update
-        app.put('/peymentStatus/:id', async (req, res) => {
+        app.put('/peymentStatus/:id', verifyJWT, async (req, res) => {
             const id = req?.params.id;
             const transactionId = req?.body.transactionIdDB;
             console.log(transactionId);
