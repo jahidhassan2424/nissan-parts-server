@@ -40,8 +40,6 @@ async function run() {
         const reviewsCollection = client.db("nissan").collection("reviews");
         // create json token function
         const generateAccessToken = (userData) => {
-            console.log(userData);
-
             return jwt.sign(userData, process.env.JWT_SECRET_KEY, { expiresIn: '1y' });
         }
 
@@ -136,6 +134,13 @@ async function run() {
             res.send(result);
         });
 
+        //get all orders
+        app.get('/orders', verifyJWT, async (req, res) => {
+            const result = await ordersCollection.find().toArray();
+            res.send(result)
+        });
+
+
 
         // =======================================================================//
         // post requests starts here 
@@ -220,7 +225,7 @@ async function run() {
             const filter = { email: email }
             const options = { upsert: true }
             const updateDoc = {
-                $set: { email, displayName: name, role: '' }
+                $set: { email, displayName: name }
             }
             const result = await usersCollection.updateOne(filter, updateDoc, options);
             const accessToken = generateAccessToken(userForToken);
@@ -289,6 +294,21 @@ async function run() {
             const result = await ordersCollection.updateOne(query, updateDoc, options);
             res.send(result)
         });
+
+        //Change Shipping
+        app.put('/order/:id', verifyJWT, async (req, res) => {
+            const id = req?.params.id;
+            const query = { _id: ObjectId(id) }
+            const options = { upsert: true }
+            const updateDoc = {
+                $set: {
+                    isShipped: true
+                }
+            }
+            const result = await ordersCollection.updateOne(query, updateDoc, options);
+            res.send(result)
+        });
+
         //=============================================================================//
         //Delete method Starts Here
         //=============================================================================//
@@ -306,7 +326,7 @@ async function run() {
         });
         // Delete Single Order by ID
         app.delete('/order/:id', async (req, res) => {
-            const id = req?.params.id
+            const id = req?.params.id;
             const query = { _id: ObjectId(id) }
             const result = await ordersCollection.deleteOne(query);
             res.send(result);
