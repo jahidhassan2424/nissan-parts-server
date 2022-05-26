@@ -101,7 +101,6 @@ async function run() {
         //Get single order by ID
         app.get('/singleOrder/:id', async (req, res) => {
             const id = req?.params.id;
-            console.log(id);
             const query = { _id: ObjectId(id) };
             const result = await ordersCollection.findOne(query);
             res.send(result)
@@ -147,18 +146,15 @@ async function run() {
         // =======================================================================//
         app.post('/orders', async (req, res) => {
             const info = req?.body;
-            console.log(info);
             const result = await ordersCollection.insertOne(info);
             res.send(result)
         });
         //Send Email
         app.post('/email', async (req, res) => {
             const body = req.body;
-            console.log(body);
             const toEmail = body.toEmail;
             const subject = body.subject;
             const text = body.text;
-            console.log(body);
             const transporter = nodemailer.createTransport({
                 service: "hotmail",
                 auth: {
@@ -218,7 +214,6 @@ async function run() {
         //====================================================================//
         //Make  User
         app.put('/users/:email', async (req, res) => {
-
             const email = req?.params.email;
             const name = req?.body.currentUser.name;
             const userForToken = req?.body.currentUser;
@@ -282,7 +277,6 @@ async function run() {
         app.put('/peymentStatus/:id', verifyJWT, async (req, res) => {
             const id = req?.params.id;
             const transactionId = req?.body.transactionIdDB;
-            console.log(transactionId);
             const query = { _id: ObjectId(id) }
             const options = { upsert: true };
             const updateDoc = {
@@ -309,6 +303,28 @@ async function run() {
             res.send(result)
         });
 
+        //Add new product
+        app.put('/products', verifyJWT, async (req, res) => {
+            console.log('hit');
+            const data = req?.body;
+            console.log('req.body', data.name);
+            // const updateDoc = {
+            //     name: data.name,
+            //     brand: data.brand,
+            //     category: data.category,
+            //     price: data.price,
+            //     description: data.description,
+            //     img: data.img,
+            //     availableQty: data.availableQty,
+            //     minOrder: data.minOrder,
+            //     itemSold: data.itemSold,
+            //     rating: 5,
+            // }
+            const result = await toolsCollection.insertOne(data)
+            res.send(result)
+        });
+
+
         //=============================================================================//
         //Delete method Starts Here
         //=============================================================================//
@@ -331,6 +347,14 @@ async function run() {
             const result = await ordersCollection.deleteOne(query);
             res.send(result);
         });
+
+        //Delete single product
+        app.delete('/product/:id', verifyJWT, async (req, res) => {
+            const id = req?.params.id;
+            const result = await toolsCollection.deleteOne({ _id: ObjectId(id) });
+            res.send(result)
+        });
+
     }
     finally {
     }
