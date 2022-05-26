@@ -46,16 +46,14 @@ async function run() {
                         return res.status(403).send({ message: 'Forbidden' })
                     }
                     req.decoded = decoded;
-                    console.log("decoded", decoded);
-
-
+                    // console.log("decoded", decoded);
                 });
                 next();
             }
         }
         //Verify admin
         async function verifyAdmin(req, res, next) {
-            const email = req.decoded.email;
+            // const email = req.decoded.email;
 
             const requester = await usersCollection.findOne({ email: email });
             if (requester?.role === 'admin') {
@@ -78,7 +76,7 @@ async function run() {
             res.send(result);
         });
         //get single product by ID
-        app.get('/product/:id', verifyJWT, async (req, res) => {
+        app.get('/product/:id', async (req, res) => {
             const id = req?.params.id;
             const result = await toolsCollection.findOne({ _id: ObjectId(id) })
             res.send(result)
@@ -99,7 +97,7 @@ async function run() {
         });
 
         //Get all users
-        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
+        app.get('/users', verifyJWT, async (req, res) => {
             const result = await usersCollection.find().toArray();
             res.send(result)
         });
@@ -112,7 +110,7 @@ async function run() {
         });
 
         //Verify admin
-        app.get('/admin/:email', async (req, res) => {
+        app.get('/admin/:email', verifyJWT, async (req, res) => {
             const email = req?.params.email;
             const user = await usersCollection.findOne({ email: email });
             const isAdmin = user.role === 'admin';
@@ -120,7 +118,7 @@ async function run() {
         });
 
         // Get all Reviews
-        app.get('/reviews', async (req, res) => {
+        app.get('/reviews', verifyJWT, async (req, res) => {
             console.log('hit');
 
             const result = await reviewsCollection.find().toArray();
@@ -138,7 +136,7 @@ async function run() {
             res.send(result)
         });
         //Send Email
-        app.post('/email', verifyJWT, async (req, res) => {
+        app.post('/email', async (req, res) => {
             const body = req.body;
             console.log(body);
             const toEmail = body.toEmail;
@@ -204,11 +202,10 @@ async function run() {
         //====================================================================//
         //Make  User
         app.put('/users/:email', async (req, res) => {
+
             const email = req?.params.email;
             const name = req?.body.currentUser.name;
-            console.log('useToken Name', name);
             const userForToken = req?.body.currentUser;
-            console.log(userForToken);
             const filter = { email: email }
             const options = { upsert: true }
             const updateDoc = {
@@ -220,7 +217,7 @@ async function run() {
         });
 
         //Make Admin
-        app.put('/makeAdmin/:email', verifyJWT, verifyAdmin, async (req, res) => {
+        app.put('/makeAdmin/:email', verifyJWT, async (req, res) => {
             const email = req?.params.email;
             const query = { email: email };
             const options = { upsert: true }
@@ -285,13 +282,13 @@ async function run() {
         //Delete method Starts Here
         //=============================================================================//
         //delete all orders
-        app.delete('/orders', async (req, res) => {
+        app.delete('/orders', verifyJWT, async (req, res) => {
             const query = {}
             const result = await ordersCollection.deleteMany(query);
             res.send(result)
         });
         //Delete all users
-        app.delete('/users', async (req, res) => {
+        app.delete('/users', verifyJWT, async (req, res) => {
             const query = {}
             const result = await usersCollection.deleteMany(query);
             res.send(result)
@@ -300,7 +297,7 @@ async function run() {
         app.delete('/order/:id', verifyJWT, async (req, res) => {
             const id = req?.params.id
             const query = { _id: ObjectId(id) }
-            const result = await usersCollection.deleteOne(query);
+            const result = await ordersCollection.deleteOne(query);
             res.send(result);
         });
     }
