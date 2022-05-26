@@ -131,9 +131,7 @@ async function run() {
         });
 
         // Get all Reviews
-        app.get('/reviews', verifyJWT, async (req, res) => {
-            console.log('hit');
-
+        app.get('/reviews', async (req, res) => {
             const result = await reviewsCollection.find().toArray();
             res.send(result);
         });
