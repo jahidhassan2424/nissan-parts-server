@@ -101,7 +101,7 @@ async function run() {
             res.send(result)
         });
         //Get single order by ID
-        app.get('/singleOrder/:id', async (req, res) => {
+        app.get('/singleOrder/:id', verifyJWT, async (req, res) => {
             const id = req?.params.id;
             console.log(id);
             const query = { _id: ObjectId(id) };
