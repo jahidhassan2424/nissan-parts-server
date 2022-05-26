@@ -24,6 +24,7 @@ async function run() {
         const singleCategoryToolsCollection = client.db("nissan").collection("singleCategory");
         const ordersCollection = client.db("nissan").collection("orders");
         const usersCollection = client.db("nissan").collection("users");
+        const reviewsCollection = client.db("nissan").collection("reviews");
         // create json token function
         const generateAccessToken = (userData) => {
             console.log(userData);
@@ -45,10 +46,26 @@ async function run() {
                         return res.status(403).send({ message: 'Forbidden' })
                     }
                     req.decoded = decoded;
+                    console.log("decoded", decoded);
+
+
                 });
                 next();
             }
         }
+        //Verify admin
+        async function verifyAdmin(req, res, next) {
+            const email = req.decoded.email;
+
+            const requester = await usersCollection.findOne({ email: email });
+            if (requester?.role === 'admin') {
+                next();
+            }
+            else {
+                res.status(403).send({ message: 'Forbidden Access' });
+            }
+        }
+
         //Reset Products data
         app.get('/productsReset', async (req, res) => {
             const getFromBackup = await toolsCollectionBackup.find().toArray();
@@ -82,7 +99,7 @@ async function run() {
         });
 
         //Get all users
-        app.get('/users', verifyJWT, async (req, res) => {
+        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
             const result = await usersCollection.find().toArray();
             res.send(result)
         });
@@ -101,6 +118,15 @@ async function run() {
             const isAdmin = user.role === 'admin';
             res.send(isAdmin)
         });
+
+        // Get all Reviews
+        app.get('/reviews', async (req, res) => {
+            console.log('hit');
+
+            const result = await reviewsCollection.find().toArray();
+            res.send(result);
+        });
+
 
         // =======================================================================//
         // post requests starts here 
@@ -151,22 +177,42 @@ async function run() {
             });
             res.send({ clientSecret: paymentIntent.client_secret })
         });
+
+        app.post('/reviews/:email', verifyJWT, async (req, res) => {
+            const reviewDetails = req?.body?.reviewDetails;
+            const email = req?.params.email;
+            const query = { reviewerEmail: email, description: reviewDetails.description }
+            const checkDuplicate = await reviewsCollection.findOne(query);
+            if (checkDuplicate) {
+                res.status(409).send({ message: "Cannot add same review twice. Change the description  and try again" })
+            }
+            else {
+                const review = {
+                    reviewerEmail: email,
+                    reviewerName: reviewDetails.userName,
+                    userPhotoUrl: reviewDetails.userPhotoUrl,
+                    rating: reviewDetails.rating,
+                    description: reviewDetails.description,
+                }
+                const result = await reviewsCollection.insertOne(review)
+                res.send({ result })
+            }
+        });
+
         //====================================================================//
         //Put Method Starts here
         //====================================================================//
         //Make  User
         app.put('/users/:email', async (req, res) => {
             const email = req?.params.email;
-            const name = req?.body.name;
-            console.log(name);
-
-            const userForToken = req?.body;
+            const name = req?.body.currentUser.name;
+            console.log('useToken Name', name);
+            const userForToken = req?.body.currentUser;
             console.log(userForToken);
-
             const filter = { email: email }
             const options = { upsert: true }
             const updateDoc = {
-                $set: { email, displayName: name }
+                $set: { email, displayName: name, role: '' }
             }
             const result = await usersCollection.updateOne(filter, updateDoc, options);
             const accessToken = generateAccessToken(userForToken);
@@ -174,7 +220,7 @@ async function run() {
         });
 
         //Make Admin
-        app.put('/makeAdmin/:email', verifyJWT, async (req, res) => {
+        app.put('/makeAdmin/:email', verifyJWT, verifyAdmin, async (req, res) => {
             const email = req?.params.email;
             const query = { email: email };
             const options = { upsert: true }
