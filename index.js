@@ -241,7 +241,7 @@ async function run() {
                 postingTime: format(date, 'pp'),
                 countTimeForNextMail: format(date, 'Hm'),
             }
-            //test comment
+
 
             const sendContactUsEmailToDB = {
                 senderEmail: data.senderEmail,
