@@ -247,10 +247,10 @@ async function run() {
                 postingTime: data.postingTime,
                 countTimeForNextMail: data.countTimeForNextMail,
             }
-            //Check if sender sent email in last 5 minutes
+            //Check if sender sent email in last 10 minutes
             const checkPreviousEmailTime = await contactEmailCollection.findOne({ senderEmail: data.senderEmail })
-            // console.log('chkpr', checkPreviousEmailTime.countTimeForNextMail);
-            // console.log(format(date, "Hmm"));
+            console.log('chkpr', checkPreviousEmailTime.countTimeForNextMail);
+            console.log(format(date, "Hmm"));
             const countTime = (format(date, "Hmm") - checkPreviousEmailTime?.countTimeForNextMail);
 
             if (countTime < 3) {
@@ -265,8 +265,8 @@ async function run() {
                 const checkPreviousEmailTime = await contactEmailCollection.deleteOne({ senderEmail: data.senderEmail })
 
                 // //Send email request to API
-                // const response = await axios.post('http://localhost:3001/email', data)
-                // console.log(response.status);
+                const response = await axios.post('http://localhost:3001/email', data)
+                console.log(response.status);
 
                 // //Note Down email sendign time and other info
                 const contactUsInput = await contactEmailCollection.insertOne(data)
