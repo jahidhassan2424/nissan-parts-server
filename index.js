@@ -251,7 +251,7 @@ async function run() {
             const checkPreviousEmailTime = await contactEmailCollection.findOne({ senderEmail: data.senderEmail })
             const countTime = (format(date, "Hmm") - checkPreviousEmailTime?.countTimeForNextMail);
 
-            if (countTime < 3) {
+            if (countTime < 10) {
                 console.log('countTime', countTime);
                 console.log(checkPreviousEmailTime?.countTimeForNextMail);
                 res.status(429).send({ errorMessage: `Try again after ${10 - countTime} minutes` })
@@ -261,9 +261,9 @@ async function run() {
             else {
                 //Delete previous record
                 const checkPreviousEmailTime = await contactEmailCollection.deleteOne({ senderEmail: data.senderEmail })
-
                 // //Send email request to API
-                const response = await axios.post('http://localhost:3001/email', data)
+                // https://evening-woodland-82887.herokuapp.com
+                const response = await axios.post('https://evening-woodland-82887.herokuapp.com/email', data)
                 console.log(response.status);
 
                 // //Note Down email sendign time and other info
