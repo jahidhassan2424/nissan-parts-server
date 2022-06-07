@@ -7,7 +7,9 @@ const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const query = require('express/lib/middleware/query');
 const stripe = require('stripe')(process.env.STRIPE_PK_KEY);
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3001;
+const axios = require('axios');
+const { format } = require('date-fns');
 
 // Middle Wire
 const corsConfig = {
@@ -15,6 +17,7 @@ const corsConfig = {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE']
 }
+
 app.use(cors(corsConfig))
 app.options("*", cors(corsConfig))
 app.use(function (req, res, next) {
@@ -27,6 +30,8 @@ app.use(express.json())
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.h2ts2.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+// Date Function
+const date = new Date();
 
 async function run() {
     try {
@@ -38,6 +43,7 @@ async function run() {
         const ordersCollection = client.db("nissan").collection("orders");
         const usersCollection = client.db("nissan").collection("users");
         const reviewsCollection = client.db("nissan").collection("reviews");
+        const contactEmailCollection = client.db("nissan").collection("contactUsEmail");
         // create json token function
         const generateAccessToken = (userData) => {
             return jwt.sign(userData, process.env.JWT_SECRET_KEY, { expiresIn: '1y' });
@@ -138,6 +144,14 @@ async function run() {
             const result = await ordersCollection.find().toArray();
             res.send(result)
         });
+        //Test api
+        app.get('/test', async (req, res) => {
+
+            const postingTime = format(date, 'pp')
+            const countTimeForNextMail = format(date, 'Hmm')
+            const formatedDate = format(date, 'PP')
+            console.log(formatedDate, postingTime, countTimeForNextMail);
+        });
 
 
 
@@ -208,6 +222,61 @@ async function run() {
                 res.send({ result })
             }
         });
+
+        //send contact us email to admin
+        app.post('/contactUs', async (req, res) => {
+            const allAdmin = [];
+            const admins = await usersCollection.find({ role: "admin" }).toArray()
+            {
+                admins.map(admin => allAdmin.push(admin.email))
+            }
+
+            const data = {
+                name: req.body.name,
+                toEmail: allAdmin,
+                subject: "Contact us email from Nissan parts",
+                text: `Sender Name:${req.body.name} Sender Email: ${req.body.email} Message:${req.body.message}`,
+                senderEmail: req.body.email,
+                postingDate: format(date, 'PP'),
+                postingTime: format(date, 'pp'),
+                countTimeForNextMail: format(date, 'Hm'),
+            }
+
+            const sendContactUsEmailToDB = {
+                senderEmail: data.senderEmail,
+                postingTime: data.postingTime,
+                countTimeForNextMail: data.countTimeForNextMail,
+            }
+            //Check if sender sent email in last 5 minutes
+            const checkPreviousEmailTime = await contactEmailCollection.findOne({ senderEmail: data.senderEmail })
+            // console.log('chkpr', checkPreviousEmailTime.countTimeForNextMail);
+            // console.log(format(date, "Hmm"));
+            const countTime = (format(date, "Hmm") - checkPreviousEmailTime?.countTimeForNextMail);
+
+            if (countTime < 3) {
+                console.log('countTime', countTime);
+                console.log(checkPreviousEmailTime?.countTimeForNextMail);
+                res.status(429).send({ errorMessage: `Try again after ${10 - countTime} minutes` })
+                // res.send(countTime)
+            }
+
+            else {
+                //Delete previous record
+                const checkPreviousEmailTime = await contactEmailCollection.deleteOne({ senderEmail: data.senderEmail })
+
+                // //Send email request to API
+                // const response = await axios.post('http://localhost:3001/email', data)
+                // console.log(response.status);
+
+                // //Note Down email sendign time and other info
+                const contactUsInput = await contactEmailCollection.insertOne(data)
+                console.log(contactUsInput);
+                res.send(contactUsInput);
+            }
+
+
+        });
+
 
         //====================================================================//
         //Put Method Starts here
