@@ -235,7 +235,7 @@ async function run() {
                 name: req.body.name,
                 toEmail: allAdmin,
                 subject: "Contact us email from Nissan parts",
-                text: `Sender Name:${req.body.name} Sender Email: ${req.body.email} Message:${req.body.message}`,
+                text: "Sender Name: " + req.body.name + "\nSender Email: " + req.body.email + " \nMessage: " + req.body.message,
                 senderEmail: req.body.email,
                 postingDate: format(date, 'PP'),
                 postingTime: format(date, 'pp'),
@@ -249,8 +249,6 @@ async function run() {
             }
             //Check if sender sent email in last 10 minutes
             const checkPreviousEmailTime = await contactEmailCollection.findOne({ senderEmail: data.senderEmail })
-            console.log('chkpr', checkPreviousEmailTime.countTimeForNextMail);
-            console.log(format(date, "Hmm"));
             const countTime = (format(date, "Hmm") - checkPreviousEmailTime?.countTimeForNextMail);
 
             if (countTime < 3) {
