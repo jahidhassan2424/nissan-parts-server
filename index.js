@@ -153,8 +153,6 @@ async function run() {
             console.log(formatedDate, postingTime, countTimeForNextMail);
         });
 
-
-
         // =======================================================================//
         // post requests starts here 
         // =======================================================================//
@@ -165,19 +163,24 @@ async function run() {
         });
         //Send Email
         app.post('/email', async (req, res) => {
+            console.log("hit");
+            console.log(req.body);
             const body = req.body;
             const toEmail = body.toEmail;
             const subject = body.subject;
             const text = body.text;
+            
             const transporter = nodemailer.createTransport({
                 service: "hotmail",
                 auth: {
-                    user: "jahidhassan.programmer@outlook.com",
-                    pass: "Lmnop@@##2424"
-                }
+
+                    user: 'jahidhassan.programmer@outlook.com',
+                    pass: 'Lmnop@@##2424',
+                },
+
             });
             const options = {
-                from: "jahidhassan.programmer@outlook.com",
+                from: req.body.sendFromEmail,
                 to: `${toEmail}`,
                 subject: `${subject}`,
                 text: `${text}`
@@ -185,10 +188,13 @@ async function run() {
             transporter.sendMail(options, function (err, info) {
                 if (err) {
                     console.log(err);
+                    res.send({success:false})
+                }
+                else{
+                    res.send({ success: true })
                 }
                 console.log("Success Information", info);
             })
-            res.send({ status: true })
         });
         //Stripe Payments
         app.post('/create-payment-intent', verifyJWT, async (req, res) => {
@@ -241,7 +247,7 @@ async function run() {
                 postingTime: format(date, 'pp'),
                 countTimeForNextMail: format(date, 'Hm'),
             }
-            //test
+
 
             const sendContactUsEmailToDB = {
                 senderEmail: data.senderEmail,
@@ -263,8 +269,8 @@ async function run() {
                 //Delete previous record
                 const checkPreviousEmailTime = await contactEmailCollection.deleteOne({ senderEmail: data.senderEmail })
                 // //Send email request to API
-                // https://evening-woodland-82887.herokuapp.com
-                const response = await axios.post('https://evening-woodland-82887.herokuapp.com/email', data)
+                // https://agile-oasis-28074.herokuapp.com/
+                const response = await axios.post('https://agile-oasis-28074.herokuapp.com/email', data)
                 console.log(response.status);
 
                 // //Note Down email sendign time and other info
