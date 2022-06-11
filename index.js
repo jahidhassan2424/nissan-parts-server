@@ -44,6 +44,8 @@ async function run() {
         const usersCollection = client.db("nissan").collection("users");
         const reviewsCollection = client.db("nissan").collection("reviews");
         const contactEmailCollection = client.db("nissan").collection("contactUsEmail");
+        const portfolioProjects = client.db("portfolio").collection("projects");
+
         // create json token function
         const generateAccessToken = (userData) => {
             return jwt.sign(userData, process.env.JWT_SECRET_KEY, { expiresIn: '1y' });
@@ -153,6 +155,21 @@ async function run() {
             console.log(formatedDate, postingTime, countTimeForNextMail);
         });
 
+        //Get all projects // Portfolio
+        app.get('/projects', async (req, res) => {
+            const result = await portfolioProjects.find().toArray()
+            res.send(result)
+        });
+
+        // get specific project by Id 
+        app.get('/projects/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) }
+            const result = await portfolioProjects.find(query).toArray()
+            res.send(result)
+        });
+
+
         // =======================================================================//
         // post requests starts here 
         // =======================================================================//
@@ -169,7 +186,7 @@ async function run() {
             const toEmail = body.toEmail;
             const subject = body.subject;
             const text = body.text;
-            
+
             const transporter = nodemailer.createTransport({
                 service: "hotmail",
                 auth: {
@@ -188,9 +205,9 @@ async function run() {
             transporter.sendMail(options, function (err, info) {
                 if (err) {
                     console.log(err);
-                    res.send({success:false})
+                    res.send({ success: false })
                 }
-                else{
+                else {
                     res.send({ success: true })
                 }
                 console.log("Success Information", info);
