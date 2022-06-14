@@ -179,40 +179,40 @@ async function run() {
             res.send(result)
         });
         //Send Email
-        // app.post('/email', async (req, res) => {
-        //     console.log("hit");
-        //     console.log(req.body);
-        //     const body = req.body;
-        //     const toEmail = body.toEmail;
-        //     const subject = body.subject;
-        //     const text = body.text;
+        app.post('/email', async (req, res) => {
+            console.log("hit");
+            console.log(req.body);
+            const body = req.body;
+            const toEmail = body.toEmail;
+            const subject = body.subject;
+            const text = body.text;
 
-        //     const transporter = nodemailer.createTransport({
-        //         service: "hotmail",
-        //         auth: {
+            const transporter = nodemailer.createTransport({
+                service: "hotmail",
+                auth: {
 
-        //             user: 'jahidhassan.programmer@outlook.com',
-        //             pass: 'Lmnop@@##2424',
-        //         },
+                    user: 'jahidhassan.programmer@outlook.com',
+                    pass: 'Lmnop@@##2424',
+                },
 
-        //     });
-        //     const options = {
-        //         from: req.body.sendFromEmail,
-        //         to: `${toEmail}`,
-        //         subject: `${subject}`,
-        //         text: `${text}`
-        //     }
-        //     transporter.sendMail(options, function (err, info) {
-        //         if (err) {
-        //             console.log(err);
-        //             res.send({ success: false })
-        //         }
-        //         else {
-        //             res.send({ success: true })
-        //         }
-        //         console.log("Success Information", info);
-        //     })
-        // });
+            });
+            const options = {
+                from: req.body.sendFromEmail,
+                to: `${toEmail}`,
+                subject: `${subject}`,
+                text: `${text}`
+            }
+            transporter.sendMail(options, function (err, info) {
+                if (err) {
+                    console.log(err);
+                    res.send({ success: false })
+                }
+                else {
+                    res.send({ success: true })
+                }
+                console.log("Success Information", info);
+            })
+        });
         //Stripe Payments
         app.post('/create-payment-intent', verifyJWT, async (req, res) => {
             const price = req?.body.amount;
