@@ -45,6 +45,8 @@ async function run() {
         const reviewsCollection = client.db("nissan").collection("reviews");
         const contactEmailCollection = client.db("nissan").collection("contactUsEmail");
         const portfolioProjects = client.db("portfolio").collection("projects");
+        const taskCollection = client.db("taskManager").collection("tasks");
+
 
         // create json token function
         const generateAccessToken = (userData) => {
@@ -170,6 +172,23 @@ async function run() {
         });
 
 
+        //For task manager
+
+        //unfinished
+        app.get('/task', async (req, res) => {
+            const query = { isCompleted: false }
+            const result = await taskCollection.find(query).toArray();
+            res.send(result);
+        });
+
+        //get finished tasks
+        app.get('/task/completed', async (req, res) => {
+            const query = { isCompleted: true }
+            const result = await taskCollection.find(query).toArray();
+            res.send(result)
+        });
+
+
         // =======================================================================//
         // post requests starts here 
         // =======================================================================//
@@ -180,8 +199,8 @@ async function run() {
         });
         //Send Email
         app.post('/email', async (req, res) => {
-            console.log("hit");
-            console.log(req.body);
+            // console.log("hit");
+            // console.log(req.body);
             const body = req.body;
             const toEmail = body.toEmail;
             const subject = body.subject;
@@ -299,6 +318,27 @@ async function run() {
 
         });
 
+
+
+        //For Task Manager
+        app.post('/task', async (req, res) => {
+            const task = { ...req.body, isCompleted: false };
+            console.log(task);
+            console.log(req.body);
+            const result = await taskCollection.insertOne(task);
+            res.send(result);
+        });
+
+        //edit completed by id
+        app.post('/task/:id', async (req, res) => {
+            const { id } = req?.params;
+            const filter = { _id: ObjectId(id) }
+            const updateDoc = {
+                $set: { isCompleted: true }
+            }
+            const result = await taskCollection.updateOne(filter, updateDoc);
+            res.send(result)
+        });
 
         //====================================================================//
         //Put Method Starts here
