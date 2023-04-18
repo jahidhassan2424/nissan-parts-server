@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js",
-    "build": "react-scripts build",
-    "deploy": "react-scripts build && firebase deploy",
+    "local_dev": "nodemon index.js",
+    "build": "npm run build",
+    "deploy": "npm run build && firebase deploy",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "push": "git add . && node ../../gitpush/gitpush.js && git push",
