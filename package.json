@@ -5,11 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "start-dev": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "push": "git add . && node ../../gitpush/gitpush.js && git push",
-    "git-deploy": "git add . && node ../../gitpush/gitpush.js && git push && react-scripts build && firebase deploy",
-    "git-init": "git init && git add . && git commit -m \"first commit\" && git branch -M main && node ../../gitpush/gitinit.js && git push -u origin main "
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",

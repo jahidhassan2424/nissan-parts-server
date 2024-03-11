@@ -129,13 +129,19 @@ async function run() {
             res.send(result);
         });
 
-        //Verify admin
-        app.get('/admin/:email', async (req, res) => {
-            const email = req?.params.email;
-            const user = await usersCollection.findOne({ email: email });
-            const isAdmin = user.role === 'admin';
-            res.send(isAdmin)
-        });
+        try {
+            //Verify admin
+            app.get('/admin/:email', async (req, res) => {
+                const email = req?.params.email;
+                const user = await usersCollection.findOne({ email: email });
+                const isAdmin = user.role === 'admin';
+                res.send(isAdmin)
+            });
+        } catch (error) {
+            if (error) {
+                console.log(error)
+            }
+        }
 
         // Get all Reviews
         app.get('/reviews', async (req, res) => {
